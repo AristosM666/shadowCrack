@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# To-Do:
+#   1) Add brute-force option
+#   2) Add changing text to display guess count
+#
+############################################################
 import sys
 import crypt
 from threading import Thread
@@ -99,32 +104,33 @@ def checkArgs():
 			listTargs = True
 			break
 		elif (sys.argv[i] == "-d"):
+			i += 1
 			if (i == len(sys.argv)):
 				print("[!] Error No Value Specified for Option '-d'.\n")
 				helpPage(1)
-			i += 1
 			dictionary = sys.argv[i]
 		elif (sys.argv[i] == "-t"):
+			i += 1
 			if (i == len(sys.argv)):
 				print("[!] Error No Value Specified for Option '-t'.\n")
 				helpPage(1)
-			i += 1
+			
 			try:
 				targets = (sys.argv[i]).split(',')
 			except:
 				print(("[!] Error Invalid Value '%s' for option '%s'.\n" % (sys.argv[i], sys.argv[i-1])))
 				helpPage(1)
 		elif (sys.argv[i] == "-c"):
+			i += 1
 			if (i == len(sys.argv)):
 				print("[!] Error No Value Specified for Option '-c'.\n")
 				helpPage(1)
-			i += 1
 			userHash = sys.argv[i]
 		elif (sys.argv[i] == "-f"):
+			i += 1
 			if (i == len(sys.argv)):
 				print("[!] Error No Value Specified for Option '-f'.\n")
 				helpPage(1)
-			i += 1
 			userFile = sys.argv[i]
 		else:
 			print(("[!] Error Invalid Argument '%s'.\n" % sys.argv[i]))
