@@ -191,7 +191,7 @@ def main():
 	if (targets):
 		for file in PASS_FILES:
 			print("[*] Searching for Users...")
-			users, hashPass = getUsers('/etc/shadow')
+			users, hashPass = getUsers(file)
 		
 			notFound = []
 			for target in targets:
