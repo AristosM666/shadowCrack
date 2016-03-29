@@ -40,12 +40,12 @@ def helpPage(status):
 
 
 def terminate(errMsg, status=0):
-	if status == 1:
-		print(("[!] %s" % errMsg))
-	else:
-		print(("[-] %s" % errMsg))
-	print("[*] Aborting...")
-	exit(status)
+    if status == 1:
+        print(("[!] %s" % errMsg))
+    else:
+        print(("[-] %s" % errMsg))
+        print("[*] Aborting...")
+        exit(status)
 	
 
 def errHandle(errno, fname):
