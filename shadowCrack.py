@@ -44,8 +44,8 @@ def terminate(errMsg, status=0):
         print(("[!] %s" % errMsg))
     else:
         print(("[-] %s" % errMsg))
-        print("[*] Aborting...")
-        exit(status)
+    print("[*] Aborting...")
+    exit(status)
 	
 
 def errHandle(errno, fname):
@@ -233,9 +233,9 @@ def main():
             errHandle(err, targetFile)
 
         if dictionary:
-        	print("[*] Attempting Dictionary Attack Against Provided Hash(es)...\n")
+            print("[*] Attempting Dictionary Attack Against Provided Hash(es)...\n")
         if brute:
-        	print("[*] Brute Forcing Provided Hash(es)...\n")
+            print("[*] Brute Forcing Provided Hash(es)...\n")
 
         for line in hashFile.readlines():
             _hash = line.split(':')[0].strip('\n')
