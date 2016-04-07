@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 #
 # ~ Project: shadowCrack v1.0
-# ~ Written By: AristosM666
+# ~ Written By: aristosMiliaresis
 #
-###############################
+#################################
 from itertools import product
 from threading import Thread
 from sys import exit, argv
@@ -11,7 +11,7 @@ from crypt import crypt
 import string
 
 
-__author__ = "AristosM666"
+__author__ = "aristosMiliaresis"
 __title__ = "shadowCrack"
 __version__ = 1.0
 
