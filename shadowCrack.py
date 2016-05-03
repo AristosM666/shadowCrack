@@ -11,7 +11,7 @@ from crypt import crypt
 import string
 
 
-__author__ = "aristosMiliaresis"
+__author__ = "AristosM666"
 __title__ = "shadowCrack"
 __version__ = 1.0
 
@@ -21,7 +21,7 @@ def helpPage(status):
 
     print("\nOperation Mode:")
     print("\t-d <filename>    provide a dictionary file")
-    print("\t-b, --brute      use a brute-force attack")
+    print("\t-b, --brute      use a brute-force attack (beta)")
     #print("\t-bL <length>     provide password length to be used for brute-forcing")
     #print("\t-bC <charset>    provide a charset to be used for brute-forcing")
     print("\t-l, --list       list all users on the system and exit")
@@ -73,12 +73,7 @@ def bruteForce(_hash, user):
             hashedWord = crypt(wordStr, salt)
             print(wordStr)
             if hashedWord == _hash:
-                if not user:
-                    print(("\n[+] Hash: '%s'" % _hash))
-                    print(("[~]     Password: '%s'" % wordStr))
-                else:
-                    print(("\n[+] Password for User '%s' Found!" % user))
-                    print(("[~] Password: '%s'\n" % wordStr))
+                print(("\n[+] Password Hash of User '%s' Cracked: '%s'" % (user, wordStr)))
                 return
         length += 1
     return
@@ -102,21 +97,25 @@ def dictionaryAttack(_hash, user, dictionary):
         word = word.strip('\n')
         hashedWord = crypt(word, salt)
         if hashedWord == _hash:
-            if not user:
-                print(("\n[+] Hash: '%s'" % _hash))
-                print(("[~]     Password: '%s'" % word))
-            else:
-                print(("\n[+] Password for User '%s' Found!" % user))
-                print(("[~] Password: '%s'\n" % word))
+            print(("[+] Password Hash of User '%s' Cracked: '%s'" % (user, word)))
             fdict.close()
             return
 
-    if not user:
-        print("[-] Unable to Crack User Provided Hash.")
-    else:
-        print(("[-] Password for '%s' Not Found!" % user))
+    print(("[-] Password of '%s' Not Found!" % user))
     fdict.close()
     return
+
+
+def parseHash(h):
+    user = h[:h.find(':')]
+    _hash = h.split(':')[0].strip('\n')
+
+    if '$' not in _hash:
+        _hash = h.split(':')[1].strip('\n')
+            
+    if _hash != '*' and _hash != '!':
+        return _hash, user
+    return '*', ''
 
 
 def getTargets(fname):
@@ -215,14 +214,15 @@ def main():
         terminate("No Targets or Hashes Provided.")
 
     if userHash:
+        _userHash, user = parseHash(userHash)
         if dictionary:
             print("[*] Attempting Dictionary Attack Against Provided Hash...")
-            t2 = Thread(target=dictionaryAttack, args=(userHash, None, dictionary))
+            t2 = Thread(target=dictionaryAttack, args=(userHash, user, dictionary))
             t2.start()
 
         if brute:
             print("[*] Brute Forcing Provided Hash...")
-            t1 = Thread(target=bruteForce, args=(userHash, None))
+            t1 = Thread(target=bruteForce, args=(userHash, user))
             t1.start()
 
     if targetFile:
@@ -237,18 +237,20 @@ def main():
         if brute:
             print("[*] Brute Forcing Provided Hash(es)...\n")
 
-        for line in hashFile.readlines():
-            _hash = line.split(':')[0].strip('\n')
-            if '$' not in _hash:
-                _hash = line.split(':')[1].strip('\n')
-            print(("[~] %s" % _hash))
+        for h in hashFile.readlines():
+            _hash, user = parseHash(h)
+            
+            if _hash != '*':
+                print(("[~] Password Hash of User '%s' Found" % user))
+            else:
+            	continue
 
             if dictionary:
-                t1 = Thread(target=dictionaryAttack, args=(_hash, None, dictionary))
+                t1 = Thread(target=dictionaryAttack, args=(_hash, user, dictionary))
                 t1.start()
 
             if brute:
-                t2 = Thread(target=bruteForce, args=(_hash, None))
+                t2 = Thread(target=bruteForce, args=(_hash, user))
                 t2.start()
         hashFile.close()
 
