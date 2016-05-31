@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 #
 # ~ Project: shadowCrack v1.0
-# ~ Written By: aristosMiliaresis
+# ~ Written By: AristosM666
 #
-#################################
+##############################
 from itertools import product
 from threading import Thread
 from sys import exit, argv
@@ -11,7 +11,7 @@ from crypt import crypt
 import string
 
 
-__author__ = "AristosM666"
+__author__ = "aristosMiliaressis"
 __title__ = "shadowCrack"
 __version__ = 1.0
 
@@ -21,7 +21,7 @@ def helpPage(status):
 
     print("\nOperation Mode:")
     print("\t-d <filename>    provide a dictionary file")
-    print("\t-b, --brute      use a brute-force attack (beta)")
+    print("\t-b, --brute      use a brute-force attack [Testing]")
     #print("\t-bL <length>     provide password length to be used for brute-forcing")
     #print("\t-bC <charset>    provide a charset to be used for brute-forcing")
     print("\t-l, --list       list all users on the system and exit")
@@ -71,9 +71,9 @@ def bruteForce(_hash, user):
         for word in gen:
             wordStr = ''.join(word).strip('\n')
             hashedWord = crypt(wordStr, salt)
-            print(wordStr)
+            print(("[*] Brute-forcing hash attempting phrase '%s'" % wordStr))
             if hashedWord == _hash:
-                print(("\n[+] Password Hash of User '%s' Cracked: '%s'" % (user, wordStr)))
+                print(("\n[:] Password Hash of User '%s' Cracked: '%s'" % (user, wordStr)))
                 return
         length += 1
     return
@@ -97,7 +97,7 @@ def dictionaryAttack(_hash, user, dictionary):
         word = word.strip('\n')
         hashedWord = crypt(word, salt)
         if hashedWord == _hash:
-            print(("[+] Password Hash of User '%s' Cracked: '%s'" % (user, word)))
+            print(("[:] Password Hash of User '%s' Cracked: '%s'" % (user, word)))
             fdict.close()
             return
 
@@ -206,12 +206,12 @@ def main():
 
         if targets:
             print(("[+] %d User(s) Found." % len(targets)))
-            print(("[+] %s" % ", ".join(map(str, targets))))
+            print(("[:] %s" % ", ".join(map(str, targets))))
         exit(1)
     elif not dictionary and not brute:
         terminate("No Dictionary File Provided.")
     elif not userHash and not targetFile and not targets:
-        terminate("No Targets or Hashes Provided.")
+        terminate("No Targets or Hash(es) Provided.")
 
     if userHash:
         _userHash, user = parseHash(userHash)
@@ -241,7 +241,7 @@ def main():
             _hash, user = parseHash(h)
             
             if _hash != '*':
-                print(("[~] Password Hash of User '%s' Found" % user))
+                print(("[+] Password Hash of User '%s' Found" % user))
             else:
             	continue
 
@@ -255,7 +255,7 @@ def main():
         hashFile.close()
 
     if targets:
-        print("[*] Searching for User(s)...")
+        print("[*] Searching for Users...")
         for fname in PASS_FILES:
             users, hashList = getTargets(fname)
 
