@@ -3,7 +3,10 @@
 # ~ Project: shadowCrack v1.0
 # ~ Written By: AristosM666
 #
-##############################
+# To Do: 
+# 1. Implement user suplied charset 
+#   for brute-forcing
+#####################################
 from __future__ import print_function
 from itertools import product
 from threading import Thread
@@ -26,6 +29,7 @@ dictionary = ""
 targets = []
 userHash = ""
 targetFile = ""
+charset = string.letters + string.digits + string.punctuation
 
 
 def helpPage(status):
@@ -34,15 +38,17 @@ def helpPage(status):
     print("\nOperation Mode:")
     print("\t-d, --dictionary  <filename>  provide a dictionary file")
     print("\t-b, --brute                   use a brute-force attack")
-    print("\t-L, --length      <min:max>   provide password length to be used for brute-forcing")
+    print("\t-L, --length      <min:max>   provide password length for brute-forcing")
     #print("\t-C, --charset     <charset>   provide a charset to be used for brute-forcing")
-    print("\t-l, --list                    list all users on the system and exit")
+    print("\t-l, --list                    *list all users on the system and exit")
     print("\t-h, --help                    display this help page and exit")
 
     print("\nTargets:")
-    print("\t-t, --targets  <target(s)>   provide a comma separated list of users to attack")
+    print("\t-t, --targets  <target(s)>   *provide a comma separated list of users to attack")
     print("\t-f, --file     <filename>    provide a text file to read hash(es) from")
     print("\t-H, --hash     <hash>        provide a hash from the command-line")
+    
+    print("\n\n\t* These actions require root privileges.")
     
     print("\nDescription:")
     print(("\t%s is a password cracker for *nix systems," % __title__))
@@ -51,9 +57,10 @@ def helpPage(status):
     exit(status)
 
 
-def error(s):
+def error(s, help=True):
     print(('\033[1;31m[!]\033[m %s' % s))
-
+    if help:
+        helpPage(1)
 
 def fail(s):
     print(('\033[1;33m[-]\033[m %s' % s))
@@ -71,12 +78,12 @@ def progress(s, end=True):
 
 
 def info(s):
-    print(('\033[1;36m[:]\033[m %s' % s))
+    print(('\033[1;36m[#]\033[m %s' % s))
 
 
 def terminate(errMsg, status=0):
     if status == 1:
-        error(errMsg)
+        error(errMsg, False)
     else:
         fail(errMsg)
     progress("Aborting...")
@@ -95,17 +102,17 @@ def errHandle(errno, fname):
 def bruteForce(_hash, user):
     global min_len
     global max_len
-
+    global charset
+    
     try:
         salt = "$" + _hash.split('$')[1] + "$" + _hash.split('$')[2]
     except:
         terminate("Invalid Hash Format!", 1)
 
-    charSet = string.letters + string.digits + string.punctuation
     length = min_len
 
     while length <= max_len:
-        gen = product(charSet, repeat=length)
+        gen = product(charset, repeat=length)
         for word in gen:
             wordStr = ''.join(word).strip('\n')
             hashedWord = crypt(wordStr, salt)
@@ -187,6 +194,7 @@ def getOpts():
     global targetFile
     global min_len
     global max_len
+    global charset
 
     i = 1
     while i < len(argv):
@@ -199,30 +207,25 @@ def getOpts():
             i += 1
             if i == len(argv):
                 error("No Value Provided for Option '--dictionary'.\n")
-                helpPage(1)
             dictionary = argv[i]
         elif argv[i] == "-t" or argv[i] == "--targets":
             i += 1
             if i == len(argv):
                 error("No Value Provided for Option '--targets'.\n")
-                helpPage(1)
 
             try:
                 targets = (argv[i]).split(',')
             except:
                 error(("Invalid Value '%s' for Option '--targets'.\n" % argv[i]))
-                helpPage(1)
         elif argv[i] == "-H" or argv[i] == "--hash":
             i += 1
             if i == len(argv):
                 error("No Value Provided for Option '--hash'.\n")
-                helpPage(1)
             userHash = argv[i]
         elif argv[i] == "-f" or argv[i] == "--file":
             i += 1
             if i == len(argv):
                 error("No Value Provided for Option '--file'.\n")
-                helpPage(1)
             targetFile = argv[i]
         elif argv[i] == "-b" or argv[i] == "--brute":
             brute = True
@@ -230,7 +233,6 @@ def getOpts():
             i += 1
             if i == len(argv):
                 error("No Value Provided for Option '--length'.\n")
-                helpPage(1)
             
             try:
       	        s = (argv[i]).split(':')[0]
@@ -242,16 +244,15 @@ def getOpts():
       	                max_len = int(s)
       	    except:
       	        error(("Invalid value '%s' provided for option '--length'\n" % argv[i]))
-      	        helpPage(1)
+            
       	    if min_len > max_len:
       	        error("Minimum Length Greater Than Maximum Length!\n")
-      	        helpPage(1)
       	    elif min_len < 0:
       	        error("Minimum Length Less Than Zero!\n")
-      	        helpPage(1)
+        elif argv[i] == "-C" or argv[i] == "--charset":
+            error("User Provided Charset Not Yet Implemented!")
         else:
             error(("Invalid Argument '%s' Provided.\n" % argv[i]))
-            helpPage(1)
         i += 1
 
 
@@ -291,7 +292,6 @@ def main():
             success(("Hash of '%s' Users Password Found.   " % user))
         else:
             error("Hash Section Not Found!\n")
-            helpPage(1)
         
         if dictionary:
             progress("Attempting Dictionary Attack Against Provided Hash...")
@@ -380,3 +380,4 @@ if __name__ == "__main__":
 \033[1;31m%s\033[m \033[1;33m[***]\033[m\n"
     % (__title__, __version__, __author__)))
     main()
+
