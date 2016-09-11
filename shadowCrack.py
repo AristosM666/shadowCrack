@@ -4,6 +4,7 @@
 # ~ Written By: AristosM666
 #
 ##############################
+from __future__ import print_function
 from itertools import product
 from threading import Thread
 from sys import exit, argv
@@ -16,21 +17,32 @@ __title__ = "shadowCrack"
 __version__ = 1.0
 
 
+# Options
+min_len = 0
+max_len = -1
+listUsers = False
+brute = False
+dictionary = ""
+targets = []
+userHash = ""
+targetFile = ""
+
+
 def helpPage(status):
-    print(("USAGE: %s [op-mode] <targets>" % argv[0]))
+    print(("USAGE: %s [op-mode] [targets]" % argv[0]))
 
     print("\nOperation Mode:")
-    print("\t-d <filename>    provide a dictionary file")
-    print("\t-b, --brute      use a brute-force attack [Testing]")
-    #print("\t-bL <length>     provide password length to be used for brute-forcing")
-    #print("\t-bC <charset>    provide a charset to be used for brute-forcing")
-    print("\t-l, --list       list all users on the system and exit")
-    print("\t-h, --help       display this help page and exit")
+    print("\t-d, --dictionary  <filename>  provide a dictionary file")
+    print("\t-b, --brute                   use a brute-force attack")
+    print("\t-L, --length      <min:max>   provide password length to be used for brute-forcing")
+    #print("\t-C, --charset     <charset>   provide a charset to be used for brute-forcing")
+    print("\t-l, --list                    list all users on the system and exit")
+    print("\t-h, --help                    display this help page and exit")
 
     print("\nTargets:")
-    print("\t-t <target(s)>   provide a comma separated list of users to attack")
-    print("\t-f <filename>    provide a text file to read hash(es) from")
-    print("\t-c <hash>        provide a hash from the command-line")
+    print("\t-t, --targets  <target(s)>   provide a comma separated list of users to attack")
+    print("\t-f, --file     <filename>    provide a text file to read hash(es) from")
+    print("\t-H, --hash     <hash>        provide a hash from the command-line")
     
     print("\nDescription:")
     print(("\t%s is a password cracker for *nix systems," % __title__))
@@ -39,41 +51,68 @@ def helpPage(status):
     exit(status)
 
 
+def error(s):
+    print(('\033[1;31m[!]\033[m %s' % s))
+
+
+def fail(s):
+    print(('\033[1;33m[-]\033[m %s' % s))
+
+
+def success(s):
+    print(('\033[1;32m[+]\033[m %s' % s))
+
+
+def progress(s, end=True):
+    if not end:
+        print(('\033[1;37m[*]\033[m %s' % s), end="")
+    else:
+        print(('\033[1;37m[*]\033[m %s' % s))
+
+
+def info(s):
+    print(('\033[1;36m[:]\033[m %s' % s))
+
+
 def terminate(errMsg, status=0):
     if status == 1:
-        print(("[!] %s" % errMsg))
+        error(errMsg)
     else:
-        print(("[-] %s" % errMsg))
-    print("[*] Aborting...")
+        fail(errMsg)
+    progress("Aborting...")
     exit(status)
 	
 
 def errHandle(errno, fname):
     if "Errno 13" in str(errno):
-        terminate(("Error Permission Denied: Can\'t Open '%s'" % fname), 1)
+        terminate(("Permission Denied: Can't Open '%s'" % fname), 1)
     elif "Errno 2" in str(errno):
-        terminate(("Error File not Found: Can\'t Find '%s'" % fname), 1)
+        terminate(("File not Found: Can't Find '%s'" % fname), 1)
     else:
         terminate(("Unknown Error while Opening File '%s'" % fname), 1)
 
 
 def bruteForce(_hash, user):
+    global min_len
+    global max_len
+
     try:
         salt = "$" + _hash.split('$')[1] + "$" + _hash.split('$')[2]
     except:
         terminate("Invalid Hash Format!", 1)
 
-    charSet = string.printable
-    length = 1
+    charSet = string.letters + string.digits + string.punctuation
+    length = min_len
 
-    while True:
+    while length <= max_len:
         gen = product(charSet, repeat=length)
         for word in gen:
             wordStr = ''.join(word).strip('\n')
             hashedWord = crypt(wordStr, salt)
-            print(("[*] Brute-forcing hash attempting phrase '%s'" % wordStr))
+            progress(("Brute-forcing hash attempting phrase '%s'     \r" % wordStr), end=False)
             if hashedWord == _hash:
-                print(("\n[:] Password Hash of User '%s' Cracked: '%s'" % (user, wordStr)))
+                print("\n")
+                info(("Hash of '%s' Users Password Cracked: '%s'" % (user, wordStr)))
                 return
         length += 1
     return
@@ -92,16 +131,19 @@ def dictionaryAttack(_hash, user, dictionary):
     except:
     	fdict.close()
         terminate("Invalid Hash Format!", 1)
-
-    for word in fdict.readlines():
+	
+    for (count, word) in enumerate(fdict.readlines()):
         word = word.strip('\n')
         hashedWord = crypt(word, salt)
+        progress(("Cracking hash, attempt %d phrase '%s'" % (count+1, word)), False)
+        print("             \r", end="")
         if hashedWord == _hash:
-            print(("[:] Password Hash of User '%s' Cracked: '%s'" % (user, word)))
+            print("\n")
+            info(("Hash of '%s' Users Password Cracked: '%s'" % (user, word)))
             fdict.close()
             return
 
-    print(("[-] Password of '%s' Not Found!" % user))
+    fail(("Password of '%s' Not Found!" % user))
     fdict.close()
     return
 
@@ -137,12 +179,14 @@ def getTargets(fname):
 
 
 def getOpts():
-    listUsers = False
-    brute = False
-    dictionary = ""
-    targets = []
-    userHash = ""
-    targetFile = ""
+    global listUsers
+    global brute
+    global dictionary
+    global targets
+    global userHash
+    global targetFile
+    global min_len
+    global max_len
 
     i = 1
     while i < len(argv):
@@ -151,97 +195,131 @@ def getOpts():
         elif argv[i] == "-l" or argv[i] == "--list":
             listUsers = True
             break
-        elif argv[i] == "-d":
+        elif argv[i] == "-d" or argv[i] == "--dictionary":
             i += 1
             if i == len(argv):
-                print("[!] Error No Value Provided for Option '-d'.\n")
+                error("No Value Provided for Option '--dictionary'.\n")
                 helpPage(1)
             dictionary = argv[i]
-        elif argv[i] == "-t":
+        elif argv[i] == "-t" or argv[i] == "--targets":
             i += 1
             if i == len(argv):
-                print("[!] Error No Value Provided for Option '-t'.\n")
+                error("No Value Provided for Option '--targets'.\n")
                 helpPage(1)
 
             try:
                 targets = (argv[i]).split(',')
             except:
-                print(("[!] Error Invalid Value '%s' for Option '%s'.\n" % (argv[i], argv[i - 1])))
+                error(("Invalid Value '%s' for Option '--targets'.\n" % argv[i]))
                 helpPage(1)
-        elif argv[i] == "-c":
+        elif argv[i] == "-H" or argv[i] == "--hash":
             i += 1
             if i == len(argv):
-                print("[!] Error No Value Provided for Option '-c'.\n")
+                error("No Value Provided for Option '--hash'.\n")
                 helpPage(1)
             userHash = argv[i]
-        elif argv[i] == "-f":
+        elif argv[i] == "-f" or argv[i] == "--file":
             i += 1
             if i == len(argv):
-                print("[!] Error No Value Provided for Option '-f'.\n")
+                error("No Value Provided for Option '--file'.\n")
                 helpPage(1)
             targetFile = argv[i]
         elif argv[i] == "-b" or argv[i] == "--brute":
             brute = True
+        elif argv[i] == "-L" or argv[i] == "--length":
+            i += 1
+            if i == len(argv):
+                error("No Value Provided for Option '--length'.\n")
+                helpPage(1)
+            
+            try:
+      	        s = (argv[i]).split(':')[0]
+      	        if s != '':
+      	            min_len = int(s)
+      	        if s != argv[i]:
+      	            s = (argv[i]).split(':')[1]
+      	            if s != '':
+      	                max_len = int(s)
+      	    except:
+      	        error(("Invalid value '%s' provided for option '--length'\n" % argv[i]))
+      	        helpPage(1)
+      	    if min_len > max_len:
+      	        error("Minimum Length Greater Than Maximum Length!\n")
+      	        helpPage(1)
+      	    elif min_len < 0:
+      	        error("Minimum Length Less Than Zero!\n")
+      	        helpPage(1)
         else:
-            print(("[!] Error Invalid Argument '%s'.\n" % argv[i]))
+            error(("Invalid Argument '%s' Provided.\n" % argv[i]))
             helpPage(1)
         i += 1
-    return listUsers, brute, dictionary, targets, userHash, targetFile
 
 
 def main():
     PASS_FILES = ['/etc/shadow', '/etc/passwd']
+    global listUsers
+    global brute
+    global dictionary
+    global targets
+    global userHash
+    global targetFile
 
     if not argv[1:]:
         helpPage(0)
 
-    listUsers, brute, dictionary, targets, userHash, targetFile = getOpts()
+    getOpts()
 
     if listUsers:
-        print("[*] Searching for Users...")
+        progress("Searching for Users...")
         for fname in PASS_FILES:
             targets, hashList = getTargets(fname)
             if targets:
                 break
 
         if targets:
-            print(("[+] %d User(s) Found." % len(targets)))
-            print(("[:] %s" % ", ".join(map(str, targets))))
+            success(("%d User(s) Found." % len(targets)))
+            info(("%s" % ", ".join(map(str, targets))))
         exit(1)
     elif not dictionary and not brute:
         terminate("No Dictionary File Provided.")
     elif not userHash and not targetFile and not targets:
-        terminate("No Targets or Hash(es) Provided.")
+        terminate("No Targets or Hashes Provided.")
 
     if userHash:
         _userHash, user = parseHash(userHash)
+        if _userHash != '*':
+            success(("Hash of '%s' Users Password Found.   " % user))
+        else:
+            error("Hash Section Not Found!\n")
+            helpPage(1)
+        
         if dictionary:
-            print("[*] Attempting Dictionary Attack Against Provided Hash...")
+            progress("Attempting Dictionary Attack Against Provided Hash...")
             t2 = Thread(target=dictionaryAttack, args=(userHash, user, dictionary))
             t2.start()
 
         if brute:
-            print("[*] Brute Forcing Provided Hash...")
+            progress("Brute Forcing Provided Hash...")
             t1 = Thread(target=bruteForce, args=(userHash, user))
             t1.start()
 
     if targetFile:
-        print("[*] Reading Hash(es) From Provided File...")
+        progress("Reading Hashes From Provided File...")
         try:
             hashFile = open(targetFile, 'r')
         except Exception as err:
             errHandle(err, targetFile)
 
         if dictionary:
-            print("[*] Attempting Dictionary Attack Against Provided Hash(es)...\n")
+            progress("Attempting Dictionary Attack Against Provided Hash(es)...\n")
         if brute:
-            print("[*] Brute Forcing Provided Hash(es)...\n")
+            progress("Brute Forcing Provided Hash(es)...\n")
 
         for h in hashFile.readlines():
             _hash, user = parseHash(h)
             
             if _hash != '*':
-                print(("[+] Password Hash of User '%s' Found" % user))
+                success(("Hash of '%s' Users Password Found.   " % user))
             else:
             	continue
 
@@ -255,7 +333,7 @@ def main():
         hashFile.close()
 
     if targets:
-        print("[*] Searching for Users...")
+        progress("Searching for Users...")
         for fname in PASS_FILES:
             users, hashList = getTargets(fname)
 
@@ -266,10 +344,10 @@ def main():
             for target in targets:
                 for user in users:
                     if user == target:
-                        print(("[+] User '%s' Found" % str(target)))
+                        success(("User '%s' Found" % str(target)))
                         break
                 else:
-                    print(("[-] User '%s' Not Found" % str(target)))
+                    fail(("User '%s' Not Found" % str(target)))
                     notFound.append(target)
 
             for target in notFound:
@@ -281,21 +359,24 @@ def main():
         if not targets or not users:
             terminate("No Targets Found!")
 
-        print("\n[*] Attacking Provided User(s)...")
+        print("\n")
+        progress("Attacking Provided User(s)...")
 
         for (i, target) in enumerate(targets):
             if dictionary:
-                print(("[*] Attempting Dictionary Attack Against User '%s'" % target))
+                progress(("Attempting Dictionary Attack Against User '%s'" % target))
                 t1 = Thread(target=dictionaryAttack, args=(hashList[i], target, dictionary))
                 t1.start()
 
             if brute:
-                print(("[*] Brute Forcing Password of User '%s'" % target))
+                progress(("Brute Forcing Hash of '%s' Users Password" % target))
                 t2 = Thread(target=bruteForce, args=(hashList[i], target))
                 t2.start()
 
 
 if __name__ == "__main__":
-    print(("[***] %s v%.1f Written By %s [***]\n"
+    print(("\033[1;33m[***]\033[m \033[1;32m%s\033[m \
+\033[1;34mv%.1f\033[m \033[1;37mWritten By\033[m \
+\033[1;31m%s\033[m \033[1;33m[***]\033[m\n"
     % (__title__, __version__, __author__)))
     main()
